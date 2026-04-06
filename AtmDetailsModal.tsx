@@ -95,7 +95,7 @@ export function AtmDetailsModal({ balance, status, onClose }: AtmDetailsModalPro
         ref={modalRef}
         tabIndex={-1}
         className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain outline-none"
-        onClick={(e: MouseEvent) => e.stopPropagation()}
+        onClick={(e: { stopPropagation: () => void }) => e.stopPropagation()}
       >
         {/* Drag handle — mobile only */}
         <div className="sm:hidden flex justify-center pt-3 pb-1">

@@ -766,8 +766,8 @@ export function Dashboard() {
                 min={1}
                 max={thresholdLow - 1}
                 value={thresholdCritical}
-                onChange={(e: Event) => {
-                  const val = Number((e.target as HTMLInputElement).value);
+                onChange={(e: { target: HTMLInputElement }) => {
+                  const val = Number(e.target.value);
                   setThresholdCritical(Math.max(1, Math.min(val, thresholdLow - 1)));
                 }}
                 className="w-16 px-2 py-1 border border-slate-200 rounded-md text-sm text-center focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
@@ -781,8 +781,8 @@ export function Dashboard() {
                 min={thresholdCritical + 1}
                 max={99}
                 value={thresholdLow}
-                onChange={(e: Event) => {
-                  const val = Number((e.target as HTMLInputElement).value);
+                onChange={(e: { target: HTMLInputElement }) => {
+                  const val = Number(e.target.value);
                   setThresholdLow(Math.min(99, Math.max(val, thresholdCritical + 1)));
                 }}
                 className="w-16 px-2 py-1 border border-slate-200 rounded-md text-sm text-center focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
