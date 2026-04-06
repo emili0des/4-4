@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, Fragment } from 'react';
 import { AtmStatus } from '../lib/api';
 import { CheckCircle, XCircle, AlertCircle, ChevronDown, Eye, EyeOff, X, Filter, ExternalLink } from 'lucide-react';
 import { decodeField, decodeAtmStatus, getStatusColor, DecodedDeviceStatus } from '../lib/hardwareStatusDecoder';
@@ -264,7 +264,7 @@ export function AtmStatusTable({ statuses, hardwareFilter = 'all', onFilterChang
 
         {/* Hint */}
         <p className="ml-auto text-xs text-slate-400 hidden sm:block">
-          Click column headers to filter
+          Click row to expand · Click column headers to filter
         </p>
       </div>
 
@@ -309,13 +309,12 @@ export function AtmStatusTable({ statuses, hardwareFilter = 'all', onFilterChang
 
           <tbody className="bg-white divide-y divide-slate-100">
             {filteredStatuses.map((status: AtmStatus) => {
-              const rowId = status.atm_pid ?? String(status.record_id);
+              const rowId = status.atm_pid ?? status.atm_name ?? (status.record_id != null ? String(status.record_id) : `row-${Math.random()}`);
               const isExpanded = expandedRowId === rowId;
               const colSpan = visibleColumns.length + 3; // ATM + Branch + Last Updated
               return (
-                <>
+                <Fragment key={rowId}>
                   <tr
-                    key={rowId}
                     onClick={() => setExpandedRowId(isExpanded ? null : rowId)}
                     className={`${getRowBorderClass(status)} hover:bg-yellow-50/60 transition-colors cursor-pointer`}
                   >
@@ -355,7 +354,7 @@ export function AtmStatusTable({ statuses, hardwareFilter = 'all', onFilterChang
 
                   {/* ── Details bar ─────────────────────────────────── */}
                   {isExpanded && (
-                    <tr key={`${rowId}-details`}>
+                    <tr>
                       <td colSpan={colSpan} className="p-0 bg-slate-50 border-b border-slate-200">
                         <div className="px-6 py-4">
                           <div className="flex items-center justify-between mb-3">
@@ -404,7 +403,7 @@ export function AtmStatusTable({ statuses, hardwareFilter = 'all', onFilterChang
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               );
             })}
           </tbody>
