@@ -22,9 +22,9 @@ function csvCell(value: string | number | null | undefined): string {
     : str;
 }
 
-function SkeletonCard({ i }: { i: number }) {
+function SkeletonCard() {
   return (
-    <div key={i} className="bg-white rounded-xl shadow-md p-6 border border-slate-100 animate-pulse">
+    <div className="bg-white rounded-xl shadow-md p-6 border border-slate-100 animate-pulse">
       <div className="flex justify-between items-start mb-5">
         <div className="space-y-2">
           <div className="h-5 w-36 bg-slate-200 rounded" />
@@ -264,23 +264,26 @@ export function Dashboard() {
     prevCriticalRef.current = currentCritical;
   }, [balances, thresholdCritical, loading]);
 
-  const filteredBalances = useMemo(() => balances.filter((balance: AtmBalance) => {
-    const matchesSearch =
-      balance.atm_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      balance.atm_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      balance.terminal_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      balance.branch?.toString().includes(searchTerm);
+  const filteredBalances = useMemo(() => {
+    const searchLower = searchTerm.toLowerCase();
+    return balances.filter((balance: AtmBalance) => {
+      const matchesSearch =
+        balance.atm_name?.toLowerCase().includes(searchLower) ||
+        balance.atm_id?.toLowerCase().includes(searchLower) ||
+        balance.terminal_id?.toLowerCase().includes(searchLower) ||
+        balance.branch?.toString().toLowerCase().includes(searchLower);
 
-    if (!matchesSearch) return false;
+      if (!matchesSearch) return false;
 
-    const pct = getBalancePct(balance);
+      const pct = getBalancePct(balance);
 
-    if (filterStatus === 'all') return showHealthyBalance ? true : pct <= thresholdLow;
-    if (filterStatus === 'critical') return pct <= thresholdCritical;
-    if (filterStatus === 'low') return pct > thresholdCritical && pct <= thresholdLow;
+      if (filterStatus === 'all') return showHealthyBalance ? true : pct <= thresholdLow;
+      if (filterStatus === 'critical') return pct <= thresholdCritical;
+      if (filterStatus === 'low') return pct > thresholdCritical && pct <= thresholdLow;
 
-    return true;
-  }), [balances, searchTerm, filterStatus, showHealthyBalance, thresholdCritical, thresholdLow]);
+      return true;
+    });
+  }, [balances, searchTerm, filterStatus, showHealthyBalance, thresholdCritical, thresholdLow]);
 
   const sortedBalances = useMemo(() => [...filteredBalances].sort((a: AtmBalance, b: AtmBalance) => {
     if (sortBy === 'pct_asc') return getBalancePct(a) - getBalancePct(b);
@@ -294,7 +297,11 @@ export function Dashboard() {
     if (!selectedAtm) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-      const idx = sortedBalances.findIndex((b: AtmBalance) => b.record_id === selectedAtm.record_id);
+      const idx = sortedBalances.findIndex((b: AtmBalance) =>
+        b.record_id != null && selectedAtm.record_id != null
+          ? b.record_id === selectedAtm.record_id
+          : (b.terminal_id ?? b.atm_id ?? b.atm_name) === (selectedAtm.terminal_id ?? selectedAtm.atm_id ?? selectedAtm.atm_name)
+      );
       if (idx === -1) return;
       if (e.key === 'ArrowLeft' && idx > 0) setSelectedAtm(sortedBalances[idx - 1]);
       if (e.key === 'ArrowRight' && idx < sortedBalances.length - 1) setSelectedAtm(sortedBalances[idx + 1]);
@@ -860,7 +867,7 @@ export function Dashboard() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {loading
-              ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} i={i} />)
+              ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
               : sortedBalances.map((balance: AtmBalance) => (
                   <AtmBalanceCard
                     key={balance.record_id ?? balance.terminal_id ?? balance.atm_id ?? balance.atm_name}
