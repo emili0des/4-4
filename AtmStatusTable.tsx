@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { AtmStatus } from '../lib/api';
-import { CheckCircle, XCircle, AlertCircle, ChevronDown, Eye, EyeOff, X, Filter } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, ChevronDown, Eye, EyeOff, X, Filter, ExternalLink } from 'lucide-react';
 import { decodeField, decodeAtmStatus, getStatusColor, DecodedDeviceStatus } from '../lib/hardwareStatusDecoder';
 
 interface AtmStatusTableProps {
@@ -25,6 +25,23 @@ const COLUMN_HEADERS = [
   { key: 'bil_cas5',   label: 'Cassette 5'   },
   { key: 'bil_cas6',   label: 'Cassette 6'   },
   { key: 'bil_cas7',   label: 'Cassette 7'   },
+] as const;
+
+// All device fields shown in the details bar (full set, regardless of visible columns)
+const DETAIL_FIELDS = [
+  { key: 'status',     label: 'ATM Status'  },
+  { key: 'net',        label: 'Network'     },
+  { key: 'crd_reader', label: 'Card Reader' },
+  { key: 'dispenser',  label: 'Dispenser'   },
+  { key: 'print_user', label: 'Printer'     },
+  { key: 'door',       label: 'Safe Door'   },
+  { key: 'encryptor',  label: 'Encryptor'   },
+  { key: 'card_bin',   label: 'Card Bin'    },
+  { key: 'rej_bin',    label: 'Reject Bin'  },
+  { key: 'depository', label: 'Depository'  },
+  { key: 'bil_cas5',   label: 'Cassette 5'  },
+  { key: 'bil_cas6',   label: 'Cassette 6'  },
+  { key: 'bil_cas7',   label: 'Cassette 7'  },
 ] as const;
 
 // ── Module-level pure helpers (no component state) ───────────────────────────
@@ -140,6 +157,7 @@ function getStatusBadge(decoded: DecodedDeviceStatus | null) {
 
 export function AtmStatusTable({ statuses, hardwareFilter = 'all', onFilterChange, onAtmClick, searchTerm = '' }: AtmStatusTableProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
   const issueCount = useMemo(
     () => statuses.filter(s => atmHasIssues(s)).length,
@@ -290,46 +308,105 @@ export function AtmStatusTable({ statuses, hardwareFilter = 'all', onFilterChang
           </thead>
 
           <tbody className="bg-white divide-y divide-slate-100">
-            {filteredStatuses.map((status: AtmStatus) => (
-              <tr
-                key={status.record_id}
-                onClick={() => status.atm_pid && onAtmClick?.(status.atm_pid)}
-                className={`${getRowBorderClass(status)} hover:bg-yellow-50/60 transition-colors ${onAtmClick ? 'cursor-pointer' : ''}`}
-                title={onAtmClick && status.atm_pid ? `Open details for ${status.atm_pid}` : undefined}
-              >
-                {/* ATM ID + Owner */}
-                <td className="px-5 py-3.5 whitespace-nowrap">
-                  <div className="flex items-center gap-3">
-                    {getStatusIcon(decodeAtmStatus(status.status))}
-                    <div>
-                      <div className="text-sm font-bold text-slate-900">{status.atm_pid}</div>
-                      {status.owner && (
-                        <div className="text-xs text-slate-400 font-medium">{status.owner}</div>
-                      )}
-                    </div>
-                  </div>
-                </td>
+            {filteredStatuses.map((status: AtmStatus) => {
+              const rowId = status.atm_pid ?? String(status.record_id);
+              const isExpanded = expandedRowId === rowId;
+              const colSpan = visibleColumns.length + 3; // ATM + Branch + Last Updated
+              return (
+                <>
+                  <tr
+                    key={rowId}
+                    onClick={() => setExpandedRowId(isExpanded ? null : rowId)}
+                    className={`${getRowBorderClass(status)} hover:bg-yellow-50/60 transition-colors cursor-pointer`}
+                  >
+                    {/* ATM ID + Owner */}
+                    <td className="px-5 py-3.5 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <ChevronDown className={`w-4 h-4 text-slate-400 flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                        {getStatusIcon(decodeAtmStatus(status.status))}
+                        <div>
+                          <div className="text-sm font-bold text-slate-900">{status.atm_pid}</div>
+                          {status.owner && (
+                            <div className="text-xs text-slate-400 font-medium">{status.owner}</div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
 
-                {/* Branch */}
-                <td className="px-5 py-3.5 whitespace-nowrap text-sm font-medium text-slate-600">
-                  {status.branch || <span className="text-slate-300">—</span>}
-                </td>
+                    {/* Branch */}
+                    <td className="px-5 py-3.5 whitespace-nowrap text-sm font-medium text-slate-600">
+                      {status.branch || <span className="text-slate-300">—</span>}
+                    </td>
 
-                {/* Device status badges */}
-                {visibleColumns.map((col: { key: string; label: string }) => (
-                  <td key={col.key} className="px-5 py-3.5 whitespace-nowrap">
-                    {getStatusBadge(decodeField(getStatusField(status, col.key), col.key))}
-                  </td>
-                ))}
+                    {/* Device status badges */}
+                    {visibleColumns.map((col: { key: string; label: string }) => (
+                      <td key={col.key} className="px-5 py-3.5 whitespace-nowrap">
+                        {getStatusBadge(decodeField(getStatusField(status, col.key), col.key))}
+                      </td>
+                    ))}
 
-                {/* Last Updated */}
-                <td className="px-5 py-3.5 whitespace-nowrap text-xs text-slate-400">
-                  {status.file_date
-                    ? new Date(status.file_date).toLocaleString()
-                    : <span className="text-slate-300">—</span>}
-                </td>
-              </tr>
-            ))}
+                    {/* Last Updated */}
+                    <td className="px-5 py-3.5 whitespace-nowrap text-xs text-slate-400">
+                      {status.file_date
+                        ? new Date(status.file_date).toLocaleString()
+                        : <span className="text-slate-300">—</span>}
+                    </td>
+                  </tr>
+
+                  {/* ── Details bar ─────────────────────────────────── */}
+                  {isExpanded && (
+                    <tr key={`${rowId}-details`}>
+                      <td colSpan={colSpan} className="p-0 bg-slate-50 border-b border-slate-200">
+                        <div className="px-6 py-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                              Device Breakdown — {status.atm_pid}
+                            </p>
+                            {onAtmClick && status.atm_pid && (
+                              <button
+                                onClick={(e: { stopPropagation: () => void }) => {
+                                  e.stopPropagation();
+                                  onAtmClick(status.atm_pid!);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-yellow-700 bg-yellow-100 hover:bg-yellow-200 border border-yellow-300 rounded-lg transition-colors"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                Open full details
+                              </button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                            {DETAIL_FIELDS.map(field => {
+                              const raw = getStatusField(status, field.key);
+                              const decoded = decodeField(raw, field.key);
+                              if (!decoded) return null;
+                              const colorClass = getStatusColor(decoded.status);
+                              const showSupply = decoded.isConfigured && decoded.supply && decoded.supply !== 'Sufficient Supply' && decoded.supply !== '—';
+                              const showAdditional = decoded.isConfigured && decoded.additional && decoded.additional !== 'Enabled / Closed' && decoded.additional !== '—';
+                              return (
+                                <div key={field.key} className={`rounded-lg border p-3 ${colorClass}`}>
+                                  <p className="text-xs font-bold uppercase tracking-wide opacity-70 mb-1">{field.label}</p>
+                                  <p className="text-sm font-semibold">{decoded.displayLabel}</p>
+                                  {showSupply && (
+                                    <p className="text-xs mt-0.5 opacity-75">{decoded.supply}</p>
+                                  )}
+                                  {showAdditional && (
+                                    <p className="text-xs opacity-75">{decoded.additional}</p>
+                                  )}
+                                  {raw && raw.trim() && !raw.trim().startsWith('-') && (
+                                    <p className="text-xs font-mono opacity-40 mt-1 truncate">{raw.trim()}</p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              );
+            })}
           </tbody>
         </table>
       </div>
