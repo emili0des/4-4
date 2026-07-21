@@ -1,0 +1,25 @@
+# .NET
+backend/**/bin/
+backend/**/obj/
+*.user
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.vs/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Local-only secrets (keep .env.development — it only holds a dev API URL)
+.env.local
+.env.*.local
